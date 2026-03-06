@@ -4,10 +4,8 @@ import { useState } from "react";
 import { APP_REGISTRY } from "@/types/platform";
 import type { ModuleType, Favorite } from "@/types/platform";
 
-const MOCK_FAVORITES: Favorite[] = [
-  { id: "f1", user_id: "user-1", resource_type: "object", resource_id: "obj-1", title: "Acme Corp", pinned_at: "" },
-  { id: "f2", user_id: "user-1", resource_type: "analysis", resource_id: "an-1", title: "Revenue by Region", pinned_at: "" },
-  { id: "f3", user_id: "user-1", resource_type: "app", resource_id: "app-1", title: "Customer 360", pinned_at: "" },
+const SIX_APPS: ModuleType[] = [
+  "data_connection", "pipeline_builder", "ontology", "prism", "lattice", "ai_platform",
 ];
 
 const MOCK_FILES = [
@@ -23,13 +21,24 @@ interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   onOpenApp: (moduleType: ModuleType) => void;
+  favorites: Favorite[];
+  onRemoveFavorite: (id: string) => void;
+  onReorderFavorites: (dragIndex: number, hoverIndex: number) => void;
+  allowedApps: string[];
 }
 
-export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps) {
+export default function Sidebar({
+  collapsed, onToggle, onOpenApp, favorites, onRemoveFavorite, onReorderFavorites, allowedApps,
+}: SidebarProps) {
   const [activeSection, setActiveSection] = useState<string>("apps");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  // Filter apps by access control (show all if allowedApps is empty = not loaded yet)
+  const visibleApps = SIX_APPS.filter(
+    (app) => allowedApps.length === 0 || allowedApps.includes(app)
+  );
 
   if (collapsed) {
     return (
@@ -37,41 +46,25 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
         className="w-12 h-full flex flex-col items-center py-3 gap-3 border-r shrink-0"
         style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
       >
-        <button onClick={onToggle} className="p-1.5 rounded hover:opacity-80" title="Expand sidebar">
-          ☰
-        </button>
-        <button onClick={() => { onToggle(); setAiChatOpen(true); }} className="p-1.5 rounded hover:opacity-80" title="AI Assist">
-          ✦
-        </button>
-        <button onClick={() => { onToggle(); setActiveSection("apps"); }} className="p-1.5 rounded hover:opacity-80" title="Applications">
-          ◧
-        </button>
-        <button onClick={() => { onToggle(); setActiveSection("favorites"); }} className="p-1.5 rounded hover:opacity-80" title="Favorites">
-          ★
-        </button>
-        <button onClick={() => { onToggle(); setActiveSection("files"); }} className="p-1.5 rounded hover:opacity-80" title="Files">
-          📁
-        </button>
+        <button onClick={onToggle} className="p-1.5 rounded hover:opacity-80" title="Expand sidebar">☰</button>
+        <button onClick={() => { onToggle(); setActiveSection("ai"); }} className="p-1.5 rounded hover:opacity-80" title="AI Assist">✦</button>
+        <button onClick={() => { onToggle(); setActiveSection("apps"); }} className="p-1.5 rounded hover:opacity-80" title="Applications">◧</button>
+        <button onClick={() => { onToggle(); setActiveSection("favorites"); }} className="p-1.5 rounded hover:opacity-80" title="Favorites">★</button>
+        <button onClick={() => { onToggle(); setActiveSection("files"); }} className="p-1.5 rounded hover:opacity-80" title="Files">📁</button>
       </div>
     );
   }
-
-  const apps = Object.entries(APP_REGISTRY).filter(([key]) =>
-    !["object_explorer", "object_view"].includes(key)
-  );
 
   return (
     <div
       className="w-72 h-full flex flex-col border-r shrink-0"
       style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
     >
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
         <span className="font-semibold text-sm">Platform</span>
         <button onClick={onToggle} className="p-1 rounded hover:opacity-80 text-sm">✕</button>
       </div>
 
-      {/* Section tabs */}
       <div className="flex border-b" style={{ borderColor: "var(--border)" }}>
         {[
           { key: "ai", label: "AI Assist" },
@@ -81,10 +74,7 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => {
-              setActiveSection(tab.key);
-              if (tab.key === "ai") setAiChatOpen(true);
-            }}
+            onClick={() => setActiveSection(tab.key)}
             className="flex-1 py-2 text-xs font-medium border-b-2 transition-colors"
             style={{
               borderColor: activeSection === tab.key ? "var(--accent)" : "transparent",
@@ -96,7 +86,6 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
         {activeSection === "ai" && (
           <div className="flex flex-col h-full">
@@ -114,16 +103,9 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
                 value={aiMessage}
                 onChange={(e) => setAiMessage(e.target.value)}
                 className="flex-1 px-3 py-2 rounded-lg text-sm border outline-none"
-                style={{
-                  background: "var(--bg-tertiary)",
-                  borderColor: "var(--border)",
-                  color: "var(--text-primary)",
-                }}
+                style={{ background: "var(--bg-tertiary)", borderColor: "var(--border)", color: "var(--text-primary)" }}
               />
-              <button
-                className="px-3 py-2 rounded-lg text-sm font-medium"
-                style={{ background: "var(--accent)", color: "#fff" }}
-              >
+              <button className="px-3 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--accent)", color: "#fff" }}>
                 →
               </button>
             </div>
@@ -136,19 +118,22 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
               Applications
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {apps.map(([key, app]) => (
-                <button
-                  key={key}
-                  onClick={() => onOpenApp(key as ModuleType)}
-                  className="flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors"
-                  style={{ borderColor: "var(--border)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span className="text-xl">{app.icon}</span>
-                  <span className="text-xs font-medium text-center leading-tight">{app.name}</span>
-                </button>
-              ))}
+              {visibleApps.map((key) => {
+                const app = APP_REGISTRY[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => onOpenApp(key)}
+                    className="flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors"
+                    style={{ borderColor: "var(--border)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span className="text-xl">{app.icon}</span>
+                    <span className="text-xs font-medium text-center leading-tight">{app.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="text-xs font-semibold uppercase mt-4 mb-2" style={{ color: "var(--text-secondary)" }}>
@@ -172,24 +157,45 @@ export default function Sidebar({ collapsed, onToggle, onOpenApp }: SidebarProps
         {activeSection === "favorites" && (
           <div>
             <div className="text-xs font-semibold uppercase mb-2" style={{ color: "var(--text-secondary)" }}>
-              Pinned Resources
+              Pinned Resources {favorites.length > 0 && `(${favorites.length})`}
             </div>
-            <div className="space-y-1">
-              {MOCK_FAVORITES.map((fav) => (
-                <button
-                  key={fav.id}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors"
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span style={{ color: "var(--warning)" }}>★</span>
-                  <span className="truncate">{fav.title}</span>
-                  <span className="text-xs ml-auto" style={{ color: "var(--text-secondary)" }}>
-                    {fav.resource_type}
-                  </span>
-                </button>
-              ))}
-            </div>
+            {favorites.length === 0 ? (
+              <div className="text-xs py-4 text-center" style={{ color: "var(--text-secondary)" }}>
+                Star resources to pin them here
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {favorites.map((fav, index) => (
+                  <div
+                    key={fav.id}
+                    draggable
+                    onDragStart={() => setDragIndex(index)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragIndex !== null && dragIndex !== index) {
+                        onReorderFavorites(dragIndex, index);
+                      }
+                      setDragIndex(null);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm group cursor-grab"
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span className="text-xs cursor-grab" style={{ color: "var(--text-secondary)" }}>⠿</span>
+                    <span style={{ color: "var(--warning)" }}>★</span>
+                    <span className="truncate flex-1">{fav.title}</span>
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{fav.resource_type}</span>
+                    <button
+                      onClick={() => onRemoveFavorite(fav.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

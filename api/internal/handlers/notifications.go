@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -30,11 +31,17 @@ var notifications = map[string]*models.Notification{
 	},
 }
 
+var notifCounter int
+
 func CreateNotification(w http.ResponseWriter, r *http.Request) {
 	var n models.Notification
 	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
+	}
+	if n.ID == "" {
+		notifCounter++
+		n.ID = fmt.Sprintf("notif-%d", notifCounter+100)
 	}
 	n.CreatedAt = time.Now()
 	notifications[n.ID] = &n
@@ -61,4 +68,45 @@ func MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
 	}
 	n.Read = true
 	writeJSON(w, http.StatusOK, n)
+}
+
+func MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	for _, n := range notifications {
+		if userID == "" || n.UserID == userID {
+			n.Read = true
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// WebhookNotification is called by upstream apps to push notifications
+func WebhookNotification(w http.ResponseWriter, r *http.Request) {
+	var payload models.WebhookPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	// If no user specified, broadcast to all users (use user-1 for dev)
+	targetUser := payload.UserID
+	if targetUser == "" {
+		targetUser = "user-1"
+	}
+
+	notifCounter++
+	n := &models.Notification{
+		ID:           fmt.Sprintf("webhook-%d", notifCounter+100),
+		UserID:       targetUser,
+		Type:         payload.Type,
+		Title:        payload.Title,
+		Message:      payload.Message,
+		ResourceType: payload.ResourceType,
+		ResourceID:   payload.ResourceID,
+		AppURL:       payload.AppURL,
+		Read:         false,
+		CreatedAt:    time.Now(),
+	}
+	notifications[n.ID] = n
+	writeJSON(w, http.StatusCreated, n)
 }

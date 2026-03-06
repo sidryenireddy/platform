@@ -38,3 +38,17 @@ func DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 	delete(favorites, id)
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func ReorderFavorites(w http.ResponseWriter, r *http.Request) {
+	var req models.FavoriteReorderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	for i, id := range req.IDs {
+		if f, ok := favorites[id]; ok {
+			f.Order = i
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}

@@ -50,3 +50,29 @@ func DeleteTab(w http.ResponseWriter, r *http.Request) {
 	delete(tabs, id)
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// SyncTabs replaces all tabs for a user with the provided set
+func SyncTabs(w http.ResponseWriter, r *http.Request) {
+	var req models.TabSyncRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	// Remove all existing tabs for this user
+	for id, t := range tabs {
+		if t.UserID == req.UserID {
+			delete(tabs, id)
+		}
+	}
+
+	// Insert new tabs
+	for i := range req.Tabs {
+		tab := req.Tabs[i]
+		tab.UserID = req.UserID
+		tab.Active = tab.ID == req.ActiveTab
+		tabs[tab.ID] = &tab
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}

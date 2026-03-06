@@ -17,7 +17,7 @@ func Setup(cfg *config.Config) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{cfg.FrontendURL},
+		AllowedOrigins:   []string{cfg.FrontendURL, "http://localhost:3000", "http://localhost:3001"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -54,6 +54,7 @@ func Setup(cfg *config.Config) *chi.Mux {
 			r.Post("/", handlers.CreateTab)
 			r.Put("/{id}", handlers.UpdateTab)
 			r.Delete("/{id}", handlers.DeleteTab)
+			r.Post("/sync", handlers.SyncTabs)
 		})
 
 		// Favorites
@@ -61,6 +62,7 @@ func Setup(cfg *config.Config) *chi.Mux {
 			r.Get("/", handlers.ListFavorites)
 			r.Post("/", handlers.CreateFavorite)
 			r.Delete("/{id}", handlers.DeleteFavorite)
+			r.Post("/reorder", handlers.ReorderFavorites)
 		})
 
 		// Notifications
@@ -68,6 +70,8 @@ func Setup(cfg *config.Config) *chi.Mux {
 			r.Get("/", handlers.ListNotifications)
 			r.Post("/", handlers.CreateNotification)
 			r.Patch("/{id}/read", handlers.MarkNotificationRead)
+			r.Post("/read-all", handlers.MarkAllNotificationsRead)
+			r.Post("/webhook", handlers.WebhookNotification)
 		})
 
 		// Search
@@ -76,6 +80,9 @@ func Setup(cfg *config.Config) *chi.Mux {
 		// User preferences
 		r.Get("/users/{userId}/preferences", handlers.GetPreferences)
 		r.Put("/users/{userId}/preferences", handlers.UpdatePreferences)
+
+		// User access (what apps/workspaces a user can see)
+		r.Get("/users/{userId}/access", handlers.GetUserAccess)
 
 		// Application access control
 		r.Get("/application-access", handlers.ListApplicationAccess)

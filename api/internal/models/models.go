@@ -31,37 +31,37 @@ type Workspace struct {
 	RestrictNavigation bool            `json:"restrict_navigation"`
 	OrganizationID     string          `json:"organization_id"`
 	IsPromoted         bool            `json:"is_promoted"`
+	AllowedRoles       json.RawMessage `json:"allowed_roles,omitempty"`
 	CreatedAt          time.Time       `json:"created_at"`
 	UpdatedAt          time.Time       `json:"updated_at"`
 }
 
-// ModuleType represents the type of module/application
 type ModuleType string
 
 const (
-	ModuleDataConnection ModuleType = "data_connection"
+	ModuleDataConnection  ModuleType = "data_connection"
 	ModulePipelineBuilder ModuleType = "pipeline_builder"
-	ModuleOntology       ModuleType = "ontology"
-	ModulePrism          ModuleType = "prism"
-	ModuleLattice        ModuleType = "lattice"
-	ModuleAIPlatform     ModuleType = "ai_platform"
-	ModuleObjectExplorer ModuleType = "object_explorer"
-	ModuleObjectView     ModuleType = "object_view"
+	ModuleOntology        ModuleType = "ontology"
+	ModulePrism           ModuleType = "prism"
+	ModuleLattice         ModuleType = "lattice"
+	ModuleAIPlatform      ModuleType = "ai_platform"
+	ModuleObjectExplorer  ModuleType = "object_explorer"
+	ModuleObjectView      ModuleType = "object_view"
 )
 
 type Module struct {
-	ID                  string          `json:"id"`
-	WorkspaceID         string          `json:"workspace_id"`
-	ModuleType          ModuleType      `json:"module_type"`
-	ResourceID          string          `json:"resource_id,omitempty"`
-	ResourceURL         string          `json:"resource_url,omitempty"`
-	DisplayName         string          `json:"display_name"`
-	Anchored            bool            `json:"anchored"`
-	InputParameterType  string          `json:"input_parameter_type,omitempty"`
-	OutputParameterType string          `json:"output_parameter_type,omitempty"`
+	ID                  string     `json:"id"`
+	WorkspaceID         string     `json:"workspace_id"`
+	ModuleType          ModuleType `json:"module_type"`
+	ResourceID          string     `json:"resource_id,omitempty"`
+	ResourceURL         string     `json:"resource_url,omitempty"`
+	DisplayName         string     `json:"display_name"`
+	Anchored            bool       `json:"anchored"`
+	InputParameterType  string     `json:"input_parameter_type,omitempty"`
+	OutputParameterType string     `json:"output_parameter_type,omitempty"`
+	Discoverable        bool       `json:"discoverable"`
 }
 
-// TriggerType for navigation actions
 type TriggerType string
 
 const (
@@ -87,6 +87,7 @@ type Tab struct {
 	State       json.RawMessage `json:"state,omitempty"`
 	Order       int             `json:"order"`
 	Pinned      bool            `json:"pinned"`
+	Active      bool            `json:"active"`
 }
 
 type Favorite struct {
@@ -95,17 +96,19 @@ type Favorite struct {
 	ResourceType string    `json:"resource_type"`
 	ResourceID   string    `json:"resource_id"`
 	Title        string    `json:"title"`
+	Order        int       `json:"order"`
 	PinnedAt     time.Time `json:"pinned_at"`
 }
 
 type Notification struct {
 	ID           string    `json:"id"`
 	UserID       string    `json:"user_id"`
-	Type         string    `json:"type"` // sync_completed, build_failed, action_executed, agent_alert
+	Type         string    `json:"type"`
 	Title        string    `json:"title"`
 	Message      string    `json:"message"`
 	ResourceType string    `json:"resource_type,omitempty"`
 	ResourceID   string    `json:"resource_id,omitempty"`
+	AppURL       string    `json:"app_url,omitempty"`
 	Read         bool      `json:"read"`
 	CreatedAt    time.Time `json:"created_at"`
 }
@@ -119,7 +122,6 @@ type UserPreference struct {
 	RecentResources    json.RawMessage `json:"recent_resources,omitempty"`
 }
 
-// AccessType for application access control
 type AccessType string
 
 const (
@@ -134,14 +136,46 @@ type ApplicationAccess struct {
 	ApplicationName string          `json:"application_name"`
 	AccessType      AccessType      `json:"access_type"`
 	UserGroupIDs    json.RawMessage `json:"user_group_ids,omitempty"`
+	AllowedRoles    json.RawMessage `json:"allowed_roles,omitempty"`
 }
 
-// Search result for global search
 type SearchResult struct {
-	Type       string          `json:"type"` // object, dataset, pipeline, analysis, app, agent
+	Type       string          `json:"type"`
 	ID         string          `json:"id"`
 	Title      string          `json:"title"`
 	Subtitle   string          `json:"subtitle,omitempty"`
 	ObjectType string          `json:"object_type,omitempty"`
+	AppURL     string          `json:"app_url,omitempty"`
 	Metadata   json.RawMessage `json:"metadata,omitempty"`
+}
+
+// WebhookPayload is sent by upstream apps to create notifications
+type WebhookPayload struct {
+	Type         string `json:"type"`
+	Title        string `json:"title"`
+	Message      string `json:"message"`
+	UserID       string `json:"user_id,omitempty"`
+	ResourceType string `json:"resource_type,omitempty"`
+	ResourceID   string `json:"resource_id,omitempty"`
+	AppURL       string `json:"app_url,omitempty"`
+}
+
+// TabSyncRequest for bulk syncing tabs
+type TabSyncRequest struct {
+	UserID    string `json:"user_id"`
+	Tabs      []Tab  `json:"tabs"`
+	ActiveTab string `json:"active_tab"`
+}
+
+// FavoriteReorderRequest for reordering favorites
+type FavoriteReorderRequest struct {
+	IDs []string `json:"ids"`
+}
+
+// UserAccessResponse returns what a user can access
+type UserAccessResponse struct {
+	AllowedApps []string     `json:"allowed_apps"`
+	Workspaces  []*Workspace `json:"workspaces"`
+	Role        string       `json:"role"`
+	ShowBuilder bool         `json:"show_builder"`
 }
