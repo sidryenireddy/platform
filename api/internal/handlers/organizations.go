@@ -25,6 +25,16 @@ var users = map[string]*models.User{
 	},
 }
 
+func CreateOrganization(w http.ResponseWriter, r *http.Request) {
+	var org models.Organization
+	if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	organizations[org.ID] = &org
+	writeJSON(w, http.StatusCreated, org)
+}
+
 func ListOrganizations(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.Organization, 0, len(organizations))
 	for _, o := range organizations {

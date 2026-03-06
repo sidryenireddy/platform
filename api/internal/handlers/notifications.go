@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -27,6 +28,17 @@ var notifications = map[string]*models.Notification{
 		Read:      false,
 		CreatedAt: time.Now(),
 	},
+}
+
+func CreateNotification(w http.ResponseWriter, r *http.Request) {
+	var n models.Notification
+	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	n.CreatedAt = time.Now()
+	notifications[n.ID] = &n
+	writeJSON(w, http.StatusCreated, n)
 }
 
 func ListNotifications(w http.ResponseWriter, r *http.Request) {

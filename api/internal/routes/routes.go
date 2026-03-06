@@ -66,6 +66,7 @@ func Setup(cfg *config.Config) *chi.Mux {
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
 			r.Get("/", handlers.ListNotifications)
+			r.Post("/", handlers.CreateNotification)
 			r.Patch("/{id}/read", handlers.MarkNotificationRead)
 		})
 
@@ -82,6 +83,7 @@ func Setup(cfg *config.Config) *chi.Mux {
 
 		// Organizations
 		r.Get("/organizations", handlers.ListOrganizations)
+		r.Post("/organizations", handlers.CreateOrganization)
 		r.Get("/organizations/{id}", handlers.GetOrganization)
 
 		// Users

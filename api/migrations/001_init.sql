@@ -1,13 +1,13 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     logo_url TEXT,
     settings JSONB DEFAULT '{}'
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE users (
     organization_id UUID NOT NULL REFERENCES organizations(id)
 );
 
-CREATE TABLE workspaces (
+CREATE TABLE IF NOT EXISTS workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     description TEXT,
@@ -30,7 +30,7 @@ CREATE TABLE workspaces (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE modules (
+CREATE TABLE IF NOT EXISTS modules (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
     module_type TEXT NOT NULL CHECK (module_type IN (
@@ -45,7 +45,7 @@ CREATE TABLE modules (
     output_parameter_type TEXT
 );
 
-CREATE TABLE navigation_actions (
+CREATE TABLE IF NOT EXISTS navigation_actions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     source_module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
     target_module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
@@ -53,7 +53,7 @@ CREATE TABLE navigation_actions (
     trigger_type TEXT NOT NULL CHECK (trigger_type IN ('click', 'button', 'open_in'))
 );
 
-CREATE TABLE tabs (
+CREATE TABLE IF NOT EXISTS tabs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     module_type TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE tabs (
     pinned BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE favorites (
+CREATE TABLE IF NOT EXISTS favorites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     resource_type TEXT NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE favorites (
     pinned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE notifications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE user_preferences (
+CREATE TABLE IF NOT EXISTS user_preferences (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     default_workspace_id UUID REFERENCES workspaces(id),
@@ -94,7 +94,7 @@ CREATE TABLE user_preferences (
     recent_resources JSONB DEFAULT '[]'
 );
 
-CREATE TABLE application_access (
+CREATE TABLE IF NOT EXISTS application_access (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL REFERENCES organizations(id),
     application_name TEXT NOT NULL,
@@ -103,9 +103,9 @@ CREATE TABLE application_access (
     UNIQUE(organization_id, application_name)
 );
 
-CREATE INDEX idx_users_org ON users(organization_id);
-CREATE INDEX idx_workspaces_org ON workspaces(organization_id);
-CREATE INDEX idx_modules_workspace ON modules(workspace_id);
-CREATE INDEX idx_tabs_user ON tabs(user_id);
-CREATE INDEX idx_favorites_user ON favorites(user_id);
-CREATE INDEX idx_notifications_user_read ON notifications(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_users_org ON users(organization_id);
+CREATE INDEX IF NOT EXISTS idx_workspaces_org ON workspaces(organization_id);
+CREATE INDEX IF NOT EXISTS idx_modules_workspace ON modules(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_tabs_user ON tabs(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
